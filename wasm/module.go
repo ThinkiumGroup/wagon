@@ -10,7 +10,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/go-interpreter/wagon/wasm/internal/readpos"
+	"github.com/ThinkiumGroup/wagon/wasm/internal/readpos"
 )
 
 var ErrInvalidMagic = errors.New("wasm: Invalid magic number")
@@ -22,16 +22,31 @@ const (
 
 // Function represents an entry in the function index space of a module.
 type Function struct {
-	Sig  *FunctionSig
-	Body *FunctionBody
-	Host reflect.Value
-	Name string
+	Sig        *FunctionSig
+	Body       *FunctionBody
+	Host       reflect.Value
+	Name       string
+	CheckGas   bool          // whether check gas out side of the function
+	GasCounter reflect.Value // returns gas with params. same signature with function, but returns an uint64.
+	FixedGas   uint64        // gas of function if GasCounter not available
 }
 
 // IsHost indicates whether this function is a host function as defined in:
 //  https://webassembly.github.io/spec/core/exec/modules.html#host-functions
 func (fct *Function) IsHost() bool {
 	return fct.Host != reflect.Value{}
+}
+
+func (fct *Function) String() string {
+	if fct == nil {
+		return "Func<nil>"
+	}
+	if fct.IsHost() {
+		return fmt.Sprintf("Func{Sig:%s IsHost Name:%s CheckGas:%t GasCounter is nil:%t FixedGas:%d}",
+			fct.Sig, fct.Name, fct.CheckGas, !fct.GasCounter.IsValid() || fct.GasCounter.IsNil(), fct.FixedGas)
+	} else {
+		return fmt.Sprintf("Func{Sig:%s Name:%s}", fct.Sig, fct.Name)
+	}
 }
 
 // Module represents a parsed WebAssembly module:

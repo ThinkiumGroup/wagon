@@ -12,9 +12,9 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/go-interpreter/wagon/disasm"
-	"github.com/go-interpreter/wagon/wasm"
-	"github.com/go-interpreter/wagon/wasm/operators"
+	"github.com/ThinkiumGroup/wagon/disasm"
+	"github.com/ThinkiumGroup/wagon/wasm"
+	"github.com/ThinkiumGroup/wagon/wasm/operators"
 )
 
 const tab = `  `

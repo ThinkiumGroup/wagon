@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-interpreter/wagon/wasm"
+	"github.com/ThinkiumGroup/wagon/wasm"
 )
 
 func TestSectionCustom(t *testing.T) {

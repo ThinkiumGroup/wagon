@@ -9,7 +9,7 @@ package operators
 import (
 	"fmt"
 
-	"github.com/go-interpreter/wagon/wasm"
+	"github.com/ThinkiumGroup/wagon/wasm"
 )
 
 var (
@@ -36,7 +36,7 @@ func (o Op) IsValid() bool {
 
 func newOp(code byte, name string, args []wasm.ValueType, returns wasm.ValueType) byte {
 	if ops[code].IsValid() {
-		panic(fmt.Errorf("Opcode %#x is already assigned to %s", code, ops[code].Name))
+		panic(fmt.Errorf("opcode %#x is already assigned to %s", code, ops[code].Name))
 	}
 
 	op := Op{

@@ -1,4 +1,4 @@
-module github.com/go-interpreter/wagon
+module github.com/ThinkiumGroup/wagon
 
 go 1.12
 

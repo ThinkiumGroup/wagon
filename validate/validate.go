@@ -10,9 +10,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/go-interpreter/wagon/wasm"
-	"github.com/go-interpreter/wagon/wasm/operators"
-	ops "github.com/go-interpreter/wagon/wasm/operators"
+	"github.com/ThinkiumGroup/wagon/wasm"
+	"github.com/ThinkiumGroup/wagon/wasm/operators"
+	ops "github.com/ThinkiumGroup/wagon/wasm/operators"
 )
 
 // vibhavp: TODO: We do not verify whether blocks don't access for the parent block, do that.
@@ -526,6 +526,9 @@ func VerifyModule(module *wasm.Module) error {
 	logger.Printf("There are %d functions", len(module.Function.Types))
 	for i, fn := range module.FunctionIndexSpace {
 		logger.Printf("Validating function: %q", fn.Name)
+		if fn.IsHost() {
+			continue
+		}
 		if vm, err := verifyBody(fn.Sig, fn.Body, module); err != nil {
 			return Error{vm.pc(), i, err}
 		}

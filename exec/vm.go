@@ -12,10 +12,10 @@ import (
 	"io"
 	"math"
 
-	"github.com/go-interpreter/wagon/disasm"
-	"github.com/go-interpreter/wagon/exec/internal/compile"
-	"github.com/go-interpreter/wagon/wasm"
-	ops "github.com/go-interpreter/wagon/wasm/operators"
+	"github.com/ThinkiumGroup/wagon/disasm"
+	"github.com/ThinkiumGroup/wagon/exec/internal/compile"
+	"github.com/ThinkiumGroup/wagon/wasm"
+	ops "github.com/ThinkiumGroup/wagon/wasm/operators"
 )
 
 var (
@@ -52,6 +52,11 @@ type context struct {
 	curFunc int64
 }
 
+func (c context) String() string {
+	return fmt.Sprintf("context{stack:%d locals:%d code:%d asm:%d pc:%d curFunc:%d}",
+		len(c.stack), len(c.locals), len(c.code), len(c.asm), c.pc, c.curFunc)
+}
+
 // VM is the execution context for executing WebAssembly bytecode.
 type VM struct {
 	ctx context
@@ -73,6 +78,10 @@ type VM struct {
 	abort bool // Flag for host functions to terminate execution
 
 	nativeBackend *nativeCompiler
+
+	hostCtx          interface{}
+	opGas            func(byte)
+	MemoryLimitation uint64
 }
 
 // As per the WebAssembly spec: https://github.com/WebAssembly/design/blob/27ac254c854994103c24834a994be16f74f54186/Semantics.md#linear-memory
@@ -205,6 +214,18 @@ func (vm *VM) resetGlobals() error {
 // Memory returns the linear memory space for the VM.
 func (vm *VM) Memory() []byte {
 	return vm.memory
+}
+
+func (vm *VM) SetHostCtx(ctx interface{}) {
+	vm.hostCtx = ctx
+}
+
+func (vm *VM) HostCtx() interface{} {
+	return vm.hostCtx
+}
+
+func (vm *VM) SetOpGas(opGas func(byte)) {
+	vm.opGas = opGas
 }
 
 // GetExportEntry returns ExportEntry of this VM's Wasm module.
@@ -398,6 +419,9 @@ func (vm *VM) execCode(compiled compiledFunction) uint64 {
 outer:
 	for int(vm.ctx.pc) < len(vm.ctx.code) && !vm.abort {
 		op := vm.ctx.code[vm.ctx.pc]
+		if vm.opGas != nil {
+			vm.opGas(op)
+		}
 		vm.ctx.pc++
 		switch op {
 		case ops.Return:
@@ -496,6 +520,14 @@ func (vm *VM) Close() error {
 	return nil
 }
 
+func (vm *VM) Abort() bool {
+	return vm.abort
+}
+
+func (vm *VM) ContextInfo() string {
+	return vm.ctx.String()
+}
+
 // Process is a proxy passed to host functions in order to access
 // things such as memory and control.
 type Process struct {
@@ -523,7 +555,7 @@ func (proc *Process) ReadAt(p []byte, off int64) (int, error) {
 
 	var err error
 	if length < len(p) {
-		err = io.ErrShortBuffer
+		err = io.ErrUnexpectedEOF
 	}
 
 	return length, err
@@ -545,7 +577,7 @@ func (proc *Process) WriteAt(p []byte, off int64) (int, error) {
 
 	var err error
 	if length < len(p) {
-		err = io.ErrShortWrite
+		err = io.ErrUnexpectedEOF
 	}
 
 	return length, err
@@ -559,4 +591,8 @@ func (proc *Process) MemSize() int {
 // Terminate stops the execution of the current module.
 func (proc *Process) Terminate() {
 	proc.vm.abort = true
+}
+
+func (proc *Process) HostCtx() interface{} {
+	return proc.vm.HostCtx()
 }

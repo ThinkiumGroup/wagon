@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-interpreter/wagon/wasm/operators"
+	"github.com/ThinkiumGroup/wagon/wasm/operators"
 )
 
 func TestF32BinOps(t *testing.T) {

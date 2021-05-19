@@ -9,7 +9,7 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/go-interpreter/wagon/exec/internal/compile"
+	"github.com/ThinkiumGroup/wagon/exec/internal/compile"
 )
 
 type function interface {
@@ -35,9 +35,21 @@ type asmBlock struct {
 	resumePC uint
 }
 
+type GasContext interface {
+	UseGas(gas uint64) bool // use gas, return true if success, or it's an ErrOutOfGas
+	GasUsed() uint64        // gas already used
+	GasLeft() uint64        // gas left
+	GasLimit() uint64       // gas limit
+	GasInfo() string        // information string
+}
+
 type goFunction struct {
-	val reflect.Value
-	typ reflect.Type
+	val        reflect.Value
+	typ        reflect.Type
+	name       string        // method name
+	checkGas   bool          // whether check gas out side of the function
+	gasCounter reflect.Value // returns gas with params. same signature with function, but returns an uint64
+	fixedGas   uint64        // gas of function if GasCounter not available
 }
 
 func (fn goFunction) call(vm *VM, index int64) {
@@ -73,6 +85,25 @@ func (fn goFunction) call(vm *VM, index int64) {
 		args[i] = val
 	}
 
+	if fn.checkGas {
+		gas := uint64(0)
+		if fn.gasCounter.IsValid() && fn.gasCounter.IsNil() == false {
+			gasRts := fn.gasCounter.Call(args)
+			gas = gasRts[0].Uint()
+		} else if fn.fixedGas > 0 && fn.fixedGas < math.MaxUint64 {
+			gas = fn.fixedGas
+		}
+		if gas > 0 {
+			gasCtx, ok := vm.HostCtx().(GasContext)
+			if !ok || gasCtx == nil {
+				panic(fmt.Errorf("missing GasContext at %s", vm.ctx))
+			}
+			if !gasCtx.UseGas(gas) {
+				panic(fmt.Errorf("out of gas at %s", vm.ctx))
+			}
+		}
+	}
+
 	rtrns := fn.val.Call(args)
 	for i, out := range rtrns {
 		kind := out.Kind()
@@ -99,7 +130,7 @@ func (compiled compiledFunction) call(vm *VM, index int64) {
 		locals[i] = vm.popUint64()
 	}
 
-	//save execution context
+	// save execution context
 	prevCtxt := vm.ctx
 
 	vm.ctx = context{
@@ -113,7 +144,7 @@ func (compiled compiledFunction) call(vm *VM, index int64) {
 
 	rtrn := vm.execCode(compiled)
 
-	//restore execution context
+	// restore execution context
 	vm.ctx = prevCtxt
 
 	if compiled.returns {

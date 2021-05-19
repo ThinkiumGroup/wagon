@@ -5,12 +5,13 @@
 package wasm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 
-	"github.com/go-interpreter/wagon/wasm/leb128"
+	"github.com/ThinkiumGroup/wagon/wasm/leb128"
 )
 
 type Marshaler interface {
@@ -105,6 +106,24 @@ func (t ElemType) String() string {
 	return "<unknown elem_type>"
 }
 
+type ValueTypes []ValueType
+
+func (ts ValueTypes) String() string {
+	if len(ts) == 0 {
+		return "()"
+	}
+	buf := new(bytes.Buffer)
+	buf.WriteByte('(')
+	for i := 0; i < len(ts); i++ {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		buf.WriteString(ts[i].String())
+	}
+	buf.WriteByte(')')
+	return buf.String()
+}
+
 // FunctionSig describes the signature of a declared function in a WASM module
 type FunctionSig struct {
 	// value for the 'func` type constructor
@@ -115,7 +134,7 @@ type FunctionSig struct {
 }
 
 func (f FunctionSig) String() string {
-	return fmt.Sprintf("<func %v -> %v>", f.ParamTypes, f.ReturnTypes)
+	return fmt.Sprintf("<func %s -> %s>", ValueTypes(f.ParamTypes), ValueTypes(f.ReturnTypes))
 }
 
 type InvalidTypeConstructorError struct {

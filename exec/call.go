@@ -7,7 +7,7 @@ package exec
 import (
 	"errors"
 
-	"github.com/go-interpreter/wagon/wasm"
+	"github.com/ThinkiumGroup/wagon/wasm"
 )
 
 var (
